@@ -16,6 +16,17 @@ for(let dish of dishes) {
     game.showLongText(msg, DialogLayout.Full)
 }
     game.showLongText(msg, DialogLayout.Full)
+
+    
+}
+function unStuckDish(theDish: Sprite) {
+    let bottomY = 7 * 16
+    let topY = 1 * 16
+    if (theDish.bottom > bottomY) {
+        theDish.bottom = bottomY
+    } else if (theDish.top < topY) {
+        theDish.top = topY
+    }
 }
 
 function makeDish() {
@@ -23,23 +34,63 @@ function makeDish() {
     let dish = dishes[dishIndex]
     let dishImg = dish.img
     let dishSprite = sprites.create(dishImg, SpriteKind.Dish)
-    dishSprite.vx = -100
-let tileCol = randint(1,6)
-tiles.placeOnTile(null, tiles.getTileLocation(9, tileCol))
-
+    dishSprite.vx = -5
+    sprites.setDataBoolean(dishSprite, "breakable", dish.breakable)
+    let tileRow = randint(1,6)
+    tiles.placeOnTile(null, tiles.getTileLocation(9, tileRow))
+    unStuckDish(dishSprite)
     controller.moveSprite(dishSprite, 0, 100)
 }
 function stopDish(theDish: Sprite){
-controller.moveSprite(theDish, 0, 0)
-theDish.vx
-
-
+    controller.moveSprite(theDish, 0, 0)
+    theDish.vx = 0
+    if(theDish.right > 5 * 16) {
+    } else {
+        theDish.setKind(SpriteKind.SettledDish)
+        makeDish()
+    }
+    
 }
-scene.onHitWall(SpriteKind.Dish, function(sprite: Sprite, location: tiles.Location) {
-    stopDish(sprite)
+function breakDish(theDish: Sprite) {
+    theDish.vx = 0
+    theDish.destroy(effects.ashes)
+}
+sprites.onOverlap(SpriteKind.Dish, SpriteKind.SettledDish,
+    function(sprite: Sprite, otherSprite: Sprite) {
+        let breakable1 = sprites.readDataBoolean(sprite, "breakable")
+        let breakable2 = sprites.readDataBoolean(otherSprite, "breakable")
+        if(breakable1 && breakable2) {
+            breakDish(sprite)
+            breakDish(otherSprite)
+        } else {
+            stopDish(sprite)
+        }
+    })
+scene.onHitWall(SpriteKind.Dish, 
+function(sprite: Sprite, location: tiles.Location) {
+    if (sprite.isHittingTile(CollisionDirection.Left)) {
+        stopDish(sprite)
+    }
 })
-
-
+game.onUpdate( function () {
+    let dishesOnScreen = sprites.allOfKind(SpriteKind.Dish)
+    let dishesSize = dishesOnScreen.length
+    if (dishesSize > 1) {
+        for (let i = 1; i < dishesSize; i++){
+            dishesOnScreen[i].destroy()
+        }
+        controller.moveSprite(dishesOnScreen[0], 0, 100)
+    }
+})
+controller.A.onEvent(ControllerButtonEvent.Pressed, function() {
+    let dishSprites = sprites.allOfKind(SpriteKind.Dish)
+    if(dishSprites.length > 0) {
+        let dishSprite = dishSprites[0]
+        let rotatedImg = scaling.rot(img` `, 90)
+        dishSprite.setImage(rotatedImg)
+        unStuckDish(dishSprite)
+    }
+})
 
 scene.setBackgroundImage(img`
     9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999
